@@ -32,6 +32,7 @@ const verifyToken = (req, res, next) => {
     }
 
     req.user = verifiedUser;
+    req.token = token;
     next();
   } catch (err) {
     return res.status(400).json({

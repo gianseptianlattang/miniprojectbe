@@ -67,7 +67,7 @@ const AuthController = {
           });
         }
 
-        SendEmail.registrationEmail(email, token);
+        SendEmail.verifyEmail(email, token);
 
         return res.status(200).json({
           message: "Registration Succeed",

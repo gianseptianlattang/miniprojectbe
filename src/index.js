@@ -13,7 +13,7 @@ const db = require("./models");
 db.sequelize.sync({});
 
 //routes
-const { authRouter } = require("./routers");
+const { authRouter, profileRouter } = require("./routers");
 
 //middleware
 app.use("/auth", authRouter);
