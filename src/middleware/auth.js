@@ -1,20 +1,25 @@
 const jwt = require("jsonwebtoken");
 const verifyToken = (req, res, next) => {
-  let token = req.headers.authorization;
-  if (!token) {
+  const tokenApi = req.headers.authorization;
+  const { tokenEmail } = req.params;
+  let token;
+
+  if (tokenApi) {
+    token = tokenApi.split(" ")[1];
+  } else if (tokenEmail) {
+    token = tokenEmail;
+  } else {
     return res.status(401).json({
-      message: "Invalid Token",
-      error: "Access Denied!",
+      message: "Access Denied!",
+      error: "Please check your token",
     });
   }
 
   try {
-    token = token.split(" ")[1];
-
     if (token === "null" || !token) {
       return res.status(401).json({
-        message: "Invalid Token",
-        error: "Access Denied!",
+        message: "Access Denied!",
+        error: "Token null or undefined",
       });
     }
 
@@ -36,14 +41,14 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-const checkRole = async (req, res, next) => {
-  if (req.user) {
-    return next();
-  }
-  return res.status(401).send("unauthorized");
-};
+// const checkRole = async (req, res, next) => {
+//   if (req.user) {
+//     return next();
+//   }
+//   return res.status(401).send("unauthorized");
+// };
 
 module.exports = {
   verifyToken,
-  checkRole,
+  // checkRole,
 };

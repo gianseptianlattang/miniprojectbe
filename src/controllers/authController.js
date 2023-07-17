@@ -7,6 +7,7 @@ const path = require("path");
 require("dotenv").config({
   path: path.resolve(__dirname, "../.env"),
 });
+const SendEmail = require("../mail/sendEmail");
 
 const AuthController = {
   userRegistration: async (req, res) => {
@@ -65,6 +66,8 @@ const AuthController = {
             error: "get token failed",
           });
         }
+
+        SendEmail.registrationEmail(email, token);
 
         return res.status(200).json({
           message: "Registration Succeed",

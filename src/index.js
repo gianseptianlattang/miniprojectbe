@@ -14,11 +14,10 @@ db.sequelize.sync({});
 
 //routes
 const { authRouter } = require("./routers");
-const { verifyToken } = require("./middleware/auth");
 
 //middleware
 app.use("/auth", authRouter);
-app.use("/auth/verify", verifyToken, authRouter);
+app.use("/profile", profileRouter);
 
 app.listen(PORT, () => {
   console.log(`server started on port ${PORT}`);
