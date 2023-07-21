@@ -13,11 +13,12 @@ const db = require("./models");
 db.sequelize.sync({});
 
 //routes
-const { authRouter, profileRouter } = require("./routers");
+const { authRouter, profileRouter, blogRouter } = require("./routers");
 
 //middleware
 app.use("/auth", authRouter);
 app.use("/profile", profileRouter);
+app.use("/blog", blogRouter);
 
 app.listen(PORT, () => {
   console.log(`server started on port ${PORT}`);

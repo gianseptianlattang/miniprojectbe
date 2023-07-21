@@ -7,7 +7,7 @@ const path = require("path");
 require("dotenv").config({
   path: path.resolve(__dirname, "../.env"),
 });
-const SendEmail = require("../mail/sendEmail");
+const SendEmail = require("../helpers/sendEmail");
 
 const AuthController = {
   userRegistration: async (req, res) => {
@@ -63,14 +63,14 @@ const AuthController = {
         if (!token) {
           return res.status(500).json({
             message: "Registration Failed",
-            error: "get token failed",
+            error: "create token failed",
           });
         }
 
         SendEmail.verifyEmail(email, token);
 
         return res.status(200).json({
-          message: "Registration Succeed",
+          message: "Registration Succeed, Please verify from email!",
           data,
           token,
         });
@@ -86,10 +86,10 @@ const AuthController = {
   userVerify: async (req, res) => {
     try {
       await db.sequelize.transaction(async (t) => {
-        const { username } = req.user;
+        const { id } = req.user;
         await User.update(
           { isVerified: 1 },
-          { where: { username: username } },
+          { where: { username: id } },
           { transaction: t }
         );
         return res.status(200).json({
@@ -132,7 +132,7 @@ const AuthController = {
       if (!checkLogin) {
         return res.status(404).json({
           message: "Login failed",
-          error: "user not found",
+          error: "User not found",
           dataInput,
         });
       }
@@ -176,6 +176,164 @@ const AuthController = {
     } catch (err) {
       return res.status(500).json({
         message: "Login failed",
+        error: err.message,
+      });
+    }
+  },
+
+  changePassword: async (req, res) => {
+    try {
+      const { currentPassword, password, confirmPassword } = req.body;
+      const { id } = req.user;
+
+      const checkData = await User.findOne({
+        where: {
+          id: id,
+        },
+      });
+
+      //check current password
+      const isValid = await bcrypt.compare(currentPassword, checkData.password);
+      if (!isValid) {
+        return res.status(404).json({
+          message: "Login failed",
+          error: "Password is incorrect",
+        });
+      }
+
+      //check confirm password
+      if (password !== confirmPassword) {
+        return res.status(400).json({
+          message: "Change Password Failed",
+          error: "password and confirm Password is not match",
+        });
+      }
+      //password validation
+      var schema = new passwordValidator();
+      schema
+        .is()
+        .min(6, "password must have minimum 6 character")
+        .has()
+        .uppercase(1, "password must have minimum 1 uppercase")
+        .has()
+        .symbols(1, "password must have minimum 1 symbol");
+
+      if (!schema.validate(password)) {
+        return res.status(400).json({
+          message: "Change Password Failed",
+          error: schema.validate(password, { details: true })[0].message,
+        });
+      }
+
+      //password encrypt and transaction
+      const salt = await bcrypt.genSalt(10);
+      const hashPassword = await bcrypt.hash(password, salt);
+      await db.sequelize.transaction(async (t) => {
+        await User.update(
+          { password: hashPassword },
+          { where: { id: id } },
+          { transaction: t }
+        );
+
+        return res.status(200).json({
+          message: "Change Password Succeed",
+        });
+      });
+    } catch (err) {
+      return res.status(err.statusCode || 500).json({
+        message: "Change Password Failed",
+        error: err.message,
+      });
+    }
+  },
+
+  resetPassword: async (req, res) => {
+    try {
+      const { password, confirmPassword } = req.body;
+      const { id, username, email } = req.user;
+
+      //check confirm password
+      if (password !== confirmPassword) {
+        return res.status(400).json({
+          message: "Reset Password Failed",
+          error: "password and confirm Password is not match",
+        });
+      }
+      //password validation
+      var schema = new passwordValidator();
+      schema
+        .is()
+        .min(6, "password must have minimum 6 character")
+        .has()
+        .uppercase(1, "password must have minimum 1 uppercase")
+        .has()
+        .symbols(1, "password must have minimum 1 symbol");
+
+      if (!schema.validate(password)) {
+        return res.status(400).json({
+          message: "Reset Password Failed",
+          error: schema.validate(password, { details: true })[0].message,
+        });
+      }
+
+      let payload = {
+        username: username,
+        password: password,
+        confirmPassword: confirmPassword,
+      };
+      const token = jwt.sign(payload, process.env.JWT_KEY, {
+        expiresIn: "1h",
+      });
+      if (!token) {
+        return res.status(500).json({
+          message: "Reset Password Failed",
+          error: "create token failed",
+        });
+      }
+
+      SendEmail.verifyEmail(email, token);
+      return res.status(200).json({
+        message: "Reset Password Succeed, Please verify from email!",
+        token,
+      });
+    } catch (err) {
+      return res.status(err.statusCode || 500).json({
+        message: "Reset Password Failed",
+        error: err.message,
+      });
+    }
+  },
+
+  verifyResetPassword: async (req, res) => {
+    try {
+      await db.sequelize.transaction(async (t) => {
+        const { username, password } = req.user;
+        const data = await User.findOne({ where: { username: username } });
+
+        if (!data) {
+          return res.status(err.statusCode || 400).json({
+            message: "Reset Password Failed",
+            error: "Wrong token",
+          });
+        }
+
+        //password encrypt and transaction
+        const salt = await bcrypt.genSalt(10);
+        const hashPassword = await bcrypt.hash(password, salt);
+        await User.update(
+          { password: hashPassword },
+          { where: { username: username } },
+          { transaction: t }
+        );
+
+        return res.status(200).json({
+          message: "Reset Password Succeed",
+          data,
+        });
+      });
+    } catch (err) {
+      return res.status(err.statusCode || 500).json({
+        message: "Reset Password Failed",
         error: err.message,
       });
     }
