@@ -1,14 +1,12 @@
 const jwt = require("jsonwebtoken");
-const verifyToken = (req, res, next) => {
+const db = require("../models");
+const User = db.User;
+const verifyToken = async (req, res, next) => {
   const tokenApi = req.headers.authorization;
-  const { tokenEmail } = req.params;
-  let token;
+  const token = tokenApi.split(" ")[1];
+  let dataUser;
 
-  if (tokenApi) {
-    token = tokenApi.split(" ")[1];
-  } else if (tokenEmail) {
-    token = tokenEmail;
-  } else {
+  if (!tokenApi) {
     return res.status(401).json({
       message: "Access Denied!",
       error: "Please check your token",
@@ -31,7 +29,24 @@ const verifyToken = (req, res, next) => {
       });
     }
 
-    req.user = verifiedUser;
+    if (!verifiedUser.username) {
+      dataUser = await User.findOne({
+        where: { email: verifiedUser.email },
+      });
+    } else {
+      dataUser = await User.findOne({
+        where: { username: verifiedUser.username },
+      });
+    }
+
+    if (!dataUser) {
+      return res.status(401).json({
+        message: "Invalid Token",
+        error: "User not registered",
+      });
+    }
+
+    req.user = dataUser;
     req.token = token;
     next();
   } catch (err) {
@@ -42,14 +57,19 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-// const checkRole = async (req, res, next) => {
-//   if (req.user) {
-//     return next();
-//   }
-//   return res.status(401).send("unauthorized");
-// };
+const checkUserVerification = async (req, res, next) => {
+  //check user verification data
+  const { isVerified } = req.user;
+  if (!isVerified) {
+    return res.status(404).json({
+      message: "Login failed",
+      error: "User not verified",
+    });
+  }
+  next();
+};
 
 module.exports = {
   verifyToken,
-  // checkRole,
+  checkUserVerification,
 };

@@ -1,16 +1,28 @@
 const router = require("express").Router();
 const { authController } = require("../controllers");
-const { verifyToken } = require("../middleware/auth");
+const { verifyToken, checkUserVerification } = require("../middleware/auth");
+const { inputRegistration, validateInput } = require("../middleware/validator");
 
-router.post("/user", authController.userRegistration);
+router.post(
+  "/user",
+  inputRegistration,
+  validateInput,
+  authController.userRegistration
+);
 router.post("/login", authController.userLogin);
 router.patch("/verify", verifyToken, authController.userVerify);
 router.patch(
-  "/verify/:tokenEmail",
+  "/change-password",
   verifyToken,
-  authController.verifyResetPassword
+  checkUserVerification,
+  authController.changePassword
 );
-router.patch("/change-password", verifyToken, authController.changePassword);
-router.patch("/password", verifyToken, authController.resetPassword);
+router.put("/forgot-password", authController.forgotPassword);
+router.patch(
+  "/password",
+  verifyToken,
+  checkUserVerification,
+  authController.resetPassword
+);
 
 module.exports = router;

@@ -1,3 +1,4 @@
+const { Op } = require("sequelize");
 const db = require("../models");
 const Blog = db.Blog;
 const User = db.User;
@@ -48,11 +49,19 @@ const BlogController = {
 
   getBlog: async (req, res) => {
     try {
-      const pageNumber = Number(req.query.page) || 1;
-      const pageSize = Number(req.query.size) || 10;
+      const pageNumber = parseInt(req.query.page) || 1;
+      const pageSize = parseInt(req.query.size) || 10;
       const categoryId = req.query.id_cat;
       const sortBy = req.query.sort || "DESC";
       const offset = (pageNumber - 1) * pageSize;
+      const searchTitle = req.query.searchByTitle;
+      const whereTitle = searchTitle
+        ? {
+            title: {
+              [Op.like]: `%${searchTitle}%`,
+            },
+          }
+        : {};
       const whereCategory = categoryId ? { id: categoryId } : {};
       const data = await Blog.findAll({
         attributes: [
@@ -81,11 +90,17 @@ const BlogController = {
         ],
         // include: ["User", "Category", "Country"],
         limit: pageSize,
-        offset,
+        offset: offset,
         order: [["createdAt", sortBy]],
+        where: whereTitle,
       });
       return res.status(200).json({
         message: "Get All Blog Succeed",
+        pageNumber,
+        pageSize,
+        sortBy,
+        categoryId,
+        searchTitle,
         data,
       });
     } catch (err) {
