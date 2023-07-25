@@ -1,16 +1,20 @@
 const nodemailer = require("nodemailer");
+const path = require("path");
+require("dotenv").config({
+  path: path.resolve(__dirname, "../.env"),
+});
 
 const transporter = nodemailer.createTransport({
   service: "hotmail",
   auth: {
-    user: "gianslpurwadhika@hotmail.com",
-    pass: "gianPurwadhika",
+    user: process.env.NODEMAILER_USER,
+    pass: process.env.NODEMAILER_PASS,
   },
 });
 const SendEmail = {
   verifyEmail: async (dataEmail, dataToken) => {
     const mailOptions = {
-      from: "gianslpurwadhika@hotmail.com",
+      from: process.env.NODEMAILER_USER,
       to: dataEmail,
       subject: "Email Verification",
       text: "Please verify your email by clicking the link below:",
@@ -28,7 +32,7 @@ const SendEmail = {
 
   changeUsernameEmail: async (dataEmail, newUsername, changes) => {
     const mailOptions = {
-      from: "gianslpurwadhika@hotmail.com",
+      from: process.env.NODEMAILER_USER,
       to: dataEmail,
       subject: `${changes} Changed`,
       text: "Thankyou",

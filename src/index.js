@@ -10,7 +10,7 @@ const PORT = process.env.PORT;
 
 //db
 const db = require("./models");
-db.sequelize.sync({ force: true });
+db.sequelize.sync({});
 
 //routes
 const {
