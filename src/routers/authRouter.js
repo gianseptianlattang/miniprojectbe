@@ -1,7 +1,12 @@
 const router = require("express").Router();
 const { authController } = require("../controllers");
 const { verifyToken, checkUserVerification } = require("../middleware/auth");
-const { inputRegistration, validateInput } = require("../middleware/validator");
+const {
+  inputRegistration,
+  validateInput,
+  inputLogin,
+  inputVerifyUser,
+} = require("../middleware/validator");
 
 router.post(
   "/user",
@@ -9,20 +14,13 @@ router.post(
   validateInput,
   authController.userRegistration
 );
-router.post("/login", authController.userLogin);
-router.patch("/verify", verifyToken, authController.userVerify);
+router.post("/login", inputLogin, validateInput, authController.userLogin);
 router.patch(
-  "/change-password",
+  "/verify",
+  inputVerifyUser,
+  validateInput,
   verifyToken,
-  checkUserVerification,
-  authController.changePassword
-);
-router.put("/forgot-password", authController.forgotPassword);
-router.patch(
-  "/password",
-  verifyToken,
-  checkUserVerification,
-  authController.resetPassword
+  authController.userVerify
 );
 
 module.exports = router;

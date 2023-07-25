@@ -1,6 +1,5 @@
 const db = require("../models");
 const User = db.User;
-const bcrypt = require("bcrypt");
 const path = require("path");
 require("dotenv").config({
   path: path.resolve(__dirname, "../.env"),
@@ -12,9 +11,10 @@ const AuthController = {
   userRegistration: async (req, res) => {
     try {
       const { username, email, phone, password, confirmPassword } = req.body;
-      const errorInput = await authService.checkRegistExistingUsernameEmail(
+      const errorInput = await authService.checkRegistExistingUser(
         email,
-        username
+        username,
+        phone
       );
       const errorPasswordValidator =
         authService.checkPasswordValidator(password);
@@ -22,7 +22,6 @@ const AuthController = {
         password,
         confirmPassword
       );
-
       const registrationError =
         errorInput || errorPasswordValidator || errorComparePassword;
       if (registrationError) {
@@ -31,23 +30,19 @@ const AuthController = {
           message: registrationError.message,
         });
       }
-
       const payload = {
         username: username,
         email: email,
         phone: phone,
       };
       const token = tokenService.createToken(payload);
-
       const data = await authService.createUser(
         username,
         email,
         phone,
         password
       );
-
       SendEmail.verifyEmail(email, token);
-
       return res.status(200).json({
         success: "Registration Succeed",
         message: "Please verify your account from email",
@@ -64,16 +59,16 @@ const AuthController = {
 
   userVerify: async (req, res) => {
     try {
-      await db.sequelize.transaction(async (t) => {
-        const { id } = req.user;
-        await User.update(
-          { isVerified: 1 },
-          { where: { id: id } },
-          { transaction: t }
-        );
-        return res.status(200).json({
-          success: "Verification Succeed",
+      const { id } = req.user;
+      const dataUpdateUser = await authService.updateIsVerifiedUserTrue(id);
+      if (dataUpdateUser) {
+        return res.status(dataUpdateUser.statusCode).json({
+          error: "Verification Failed",
+          message: dataUpdateUser.message,
         });
+      }
+      return res.status(200).json({
+        success: "Verification Succeed",
       });
     } catch (err) {
       return res.status(err.statusCode || 500).json({
@@ -86,17 +81,32 @@ const AuthController = {
   userLogin: async (req, res) => {
     try {
       const { username, email, phone, password } = req.body;
-      //checkLoginInput
-      //data validation
-      if (!checkLogin) {
-        return res.status(404).json({
-          message: "Login failed",
-          error: "User not found",
-          dataInput,
+      let dataInput = {};
+      if (username) {
+        dataInput = { username: username };
+      } else if (email) {
+        dataInput = { email: email };
+      } else if (phone) {
+        dataInput = { phone: phone };
+      } else {
+        return {
+          statusCode: 500,
+          message: "Invalid input",
+        };
+      }
+      const errorCheckLogin = await authService.checkLoginInput(
+        password,
+        dataInput
+      );
+      if (errorCheckLogin) {
+        return res.status(errorCheckLogin.statusCode).json({
+          error: "Login failed",
+          message: errorCheckLogin.message,
         });
       }
-      //checkPassword
-      //create token
+      const checkLogin = await User.findOne({
+        where: dataInput,
+      });
       let payload = {
         id: checkLogin.id,
         username: checkLogin.username,
@@ -105,7 +115,7 @@ const AuthController = {
         isAdmin: checkLogin.isAdmin,
         isVerified: checkLogin.isVerified,
       };
-      // createToken(payload);
+      const token = tokenService.createToken(payload);
       return res.status(200).json({
         message: "Login succeed",
         data: payload,
@@ -114,112 +124,6 @@ const AuthController = {
     } catch (err) {
       return res.status(500).json({
         message: "Login failed",
-        error: err.message,
-      });
-    }
-  },
-
-  changePassword: async (req, res) => {
-    try {
-      const { currentPassword, password, confirmPassword } = req.body;
-      const { id } = req.user;
-
-      const checkData = await User.findOne({
-        where: {
-          id: id,
-        },
-      });
-
-      //check current password
-
-      //check Compare password
-      // if (password !== confirmPassword)
-
-      //password validation
-      // var schema = new passwordValidator();
-
-      //password encrypt and transaction
-      const salt = await bcrypt.genSalt(10);
-      const hashPassword = await bcrypt.hash(password, salt);
-      await db.sequelize.transaction(async (t) => {
-        await User.update(
-          { password: hashPassword },
-          { where: { id: id } },
-          { transaction: t }
-        );
-
-        return res.status(200).json({
-          message: "Change Password Succeed",
-        });
-      });
-    } catch (err) {
-      return res.status(err.statusCode || 500).json({
-        message: "Change Password Failed",
-        error: err.message,
-      });
-    }
-  },
-
-  forgotPassword: async (req, res) => {
-    try {
-      const { email } = req.body;
-
-      let payload = {
-        email: email,
-      };
-      // createToken(payload);
-
-      SendEmail.verifyEmail(email, token);
-      return res.status(200).json({
-        message: "Reset Password Succeed, Please verify from email!",
-        token,
-      });
-    } catch (err) {
-      return res.status(err.statusCode || 500).json({
-        message: "Reset Password Failed",
-        error: err.message,
-      });
-    }
-  },
-
-  resetPassword: async (req, res) => {
-    try {
-      const { password, confirmPassword } = req.body;
-
-      //check COmpare password
-      // if (password !== confirmPassword)
-
-      //password validation
-      // var schema = new passwordValidator();
-
-      const { username } = req.user;
-      const data = await User.findOne({ where: { username: username } });
-
-      if (!data) {
-        return res.status(err.statusCode || 400).json({
-          message: "Reset Password Failed",
-          error: "Wrong token",
-        });
-      }
-
-      //password encrypt and transaction
-      const salt = await bcrypt.genSalt(10);
-      const hashPassword = await bcrypt.hash(password, salt);
-      await db.sequelize.transaction(async (t) => {
-        await User.update(
-          { password: hashPassword },
-          { where: { username: username } },
-          { transaction: t }
-        );
-
-        return res.status(200).json({
-          message: "Reset Password Succeed",
-          data,
-        });
-      });
-    } catch (err) {
-      return res.status(err.statusCode || 500).json({
-        message: "Reset Password Failed",
         error: err.message,
       });
     }

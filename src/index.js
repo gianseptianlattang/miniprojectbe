@@ -10,15 +10,21 @@ const PORT = process.env.PORT;
 
 //db
 const db = require("./models");
-db.sequelize.sync({});
+db.sequelize.sync({ force: true });
 
 //routes
-const { authRouter, profileRouter, blogRouter } = require("./routers");
+const {
+  authRouter,
+  profileRouter,
+  blogRouter,
+  passwordRouter,
+} = require("./routers");
 
 //middleware
 app.use("/auth", authRouter);
 app.use("/profile", profileRouter);
 app.use("/blog", blogRouter);
+app.use("/password", passwordRouter);
 
 app.listen(PORT, () => {
   console.log(`server started on port ${PORT}`);

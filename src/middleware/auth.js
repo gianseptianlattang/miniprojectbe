@@ -3,10 +3,15 @@ const db = require("../models");
 const User = db.User;
 const verifyToken = async (req, res, next) => {
   const tokenApi = req.headers.authorization;
-  const token = tokenApi.split(" ")[1];
+  const tokenEmail = req.params.tokenEmail;
+  // const token = tokenApi.split(" ")[1];
   let dataUser;
 
-  if (!tokenApi) {
+  if (tokenApi) {
+    token = tokenApi.split(" ")[1];
+  } else if (tokenEmail) {
+    token = tokenEmail;
+  } else {
     return res.status(401).json({
       message: "Access Denied!",
       error: "Please check your token",
@@ -28,7 +33,6 @@ const verifyToken = async (req, res, next) => {
         error: "Unauthorized request",
       });
     }
-
     if (!verifiedUser.username) {
       dataUser = await User.findOne({
         where: { email: verifiedUser.email },
@@ -48,6 +52,7 @@ const verifyToken = async (req, res, next) => {
 
     req.user = dataUser;
     req.token = token;
+    req.dataToken = verifiedUser;
     next();
   } catch (err) {
     return res.status(400).json({
@@ -62,7 +67,7 @@ const checkUserVerification = async (req, res, next) => {
   const { isVerified } = req.user;
   if (!isVerified) {
     return res.status(404).json({
-      message: "Login failed",
+      message: "Verification failed",
       error: "User not verified",
     });
   }

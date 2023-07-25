@@ -22,8 +22,8 @@ const ProfileController = {
         });
         if (username !== currentUsername || !isCurrentUsernameExist) {
           return res.status(400).json({
-            message: "Invalid Username",
-            error: "Wrong token or current username",
+            error: "Invalid Username",
+            message: "Wrong token or current username",
           });
         }
         const isUserExist = await User.findOne({
@@ -33,8 +33,8 @@ const ProfileController = {
         });
         if (isUserExist) {
           return res.status(400).json({
-            message: "Invalid Username",
-            error: "New Username Already Exist",
+            error: "Invalid Username",
+            message: "New Username Already Exist",
           });
         }
         await User.update(
@@ -42,16 +42,16 @@ const ProfileController = {
           { where: { username: username } },
           { transaction: t }
         );
-        SendEmail.changeUsernameEmail(email, "Username");
+        SendEmail.changeUsernameEmail(email, newUsername, "Username");
         return res.status(200).json({
-          message: "Username updated",
+          success: "Username updated",
           username: newUsername,
         });
       });
     } catch (err) {
       return res.status(err.statusCode || 500).json({
-        message: "Update Failed",
-        error: err.message,
+        error: "Update Failed",
+        message: err.message,
       });
     }
   },
@@ -59,8 +59,8 @@ const ProfileController = {
   changeEmail: async (req, res) => {
     try {
       await db.sequelize.transaction(async (t) => {
-        const { email } = req.user;
-        const { username, currentEmail, newEmail } = req.body;
+        const { username, email } = req.user;
+        const { currentEmail, newEmail } = req.body;
         const isCurrentEmailExist = await User.findOne({
           where: {
             email: currentEmail,
@@ -68,8 +68,8 @@ const ProfileController = {
         });
         if (email !== currentEmail || !isCurrentEmailExist) {
           return res.status(400).json({
-            message: "Invalid Email",
-            error: "Wrong token or current email",
+            error: "Invalid Email",
+            message: "Wrong token or current email",
           });
         }
         const isEmailExist = await User.findOne({
@@ -79,8 +79,8 @@ const ProfileController = {
         });
         if (isEmailExist) {
           return res.status(400).json({
-            message: "Invalid Email",
-            error: "New Email Already Exist",
+            error: "Invalid Email",
+            message: "New Email Already Exist",
           });
         }
         let payload = {
@@ -93,21 +93,21 @@ const ProfileController = {
         });
         if (!token) {
           return res.status(500).json({
-            message: "Registration Failed",
-            error: "create token failed",
+            error: "Registration Failed",
+            message: "create token failed",
           });
         }
 
         SendEmail.verifyEmail(newEmail, token);
         return res.status(200).json({
-          message: "Please verify new email",
+          success: "Please verify new email",
           token,
         });
       });
     } catch (err) {
       return res.status(err.statusCode || 500).json({
-        message: "Update Email Failed",
-        error: err.message,
+        error: "Update Email Failed",
+        message: err.message,
       });
     }
   },
@@ -115,13 +115,13 @@ const ProfileController = {
   verifyByEmail: async (req, res) => {
     try {
       await db.sequelize.transaction(async (t) => {
-        const { oldEmail, newEmail } = req.user;
+        const { oldEmail, newEmail } = req.dataToken;
         const data = await User.findOne({ where: { email: oldEmail } });
 
         if (!data) {
           return res.status(err.statusCode || 400).json({
-            message: "Update Email Failed",
-            error: "Wrong current email",
+            error: "Update Email Failed",
+            message: "Wrong current email",
           });
         }
         await User.update(
@@ -131,14 +131,14 @@ const ProfileController = {
         );
 
         return res.status(200).json({
-          message: "Email updated",
-          email: newEmail,
+          success: "Email updated",
+          message: newEmail,
         });
       });
     } catch (err) {
       return res.status(err.statusCode || 500).json({
-        message: "Update Email Failed",
-        error: err.message,
+        error: "Update Email Failed",
+        message: err.message,
       });
     }
   },
@@ -146,7 +146,7 @@ const ProfileController = {
   changePhone: async (req, res) => {
     try {
       await db.sequelize.transaction(async (t) => {
-        const { phone, email } = req.user;
+        const { id, phone, email } = req.user;
         const { currentPhone, newPhone } = req.body;
         const isCurrentPhoneExist = await User.findOne({
           where: {
@@ -155,8 +155,8 @@ const ProfileController = {
         });
         if (phone !== currentPhone || !isCurrentPhoneExist) {
           return res.status(400).json({
-            message: "Invalid Phone",
-            error: "Wrong token or current phone",
+            error: "Invalid Phone",
+            message: "Wrong token or current phone",
           });
         }
         const isNewPhoneExist = await User.findOne({
@@ -172,25 +172,31 @@ const ProfileController = {
         }
         await User.update(
           { phone: newPhone },
-          { where: { phone: phone } },
+          { where: { id: id } },
           { transaction: t }
         );
-        SendEmail.changeUsernameEmail(email, "Phone");
+        SendEmail.changeUsernameEmail(email, newPhone, "Phone");
         return res.status(200).json({
-          message: "Phone updated",
-          phone: newPhone,
+          success: "Phone updated",
+          message: newPhone,
         });
       });
     } catch (err) {
       return res.status(err.statusCode || 500).json({
-        message: "Update Failed",
-        error: err.message,
+        error: "Update Failed",
+        message: err.message,
       });
     }
   },
 
   changeAvatar: async (req, res) => {
     try {
+      if (!req.file) {
+        return res.status(400).json({
+          error: "Change avatar failed",
+          message: "avatar cannot be empty!",
+        });
+      }
       const { id } = req.user;
       await db.sequelize.transaction(async (t) => {
         const oldData = await User.findOne({ where: { id } });
@@ -215,14 +221,14 @@ const ProfileController = {
           console.log("Old avatar deleted successfully");
         });
         return res.status(200).json({
-          message: "Change avatar Success",
+          success: "Change avatar Success",
           image: req.file.path,
         });
       });
     } catch (err) {
       return res.status(500).json({
-        message: "Change avatar failed",
-        error: err.message,
+        error: "Change avatar failed",
+        message: err.message,
       });
     }
   },

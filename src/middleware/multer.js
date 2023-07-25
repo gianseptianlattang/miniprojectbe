@@ -2,11 +2,8 @@ const multer = require("multer");
 const fs = require("fs");
 
 let defaultPath = "public";
+const maxSize = 1 * 1024 * 1024; //1MB
 const storage = multer.diskStorage({
-  // destination: (req, file, cb) => {
-  //   cb(null, defaultPath);
-  // },
-
   destination: async (req, file, cb) => {
     const isDirectoryExist = fs.existsSync(`${defaultPath}/${file.fieldname}`);
     if (!isDirectoryExist) {
@@ -40,8 +37,12 @@ const fileFilter = (req, file, cb) => {
   ) {
     cb(null, true);
   } else {
-    cb(new Error("file format not match"));
+    cb(new Error("File format not match"));
   }
 };
 
-exports.multerUpload = multer({ storage: storage, fileFilter: fileFilter });
+exports.multerUpload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: { fileSize: maxSize },
+});

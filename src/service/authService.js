@@ -7,10 +7,13 @@ require("dotenv").config({
   path: path.resolve(__dirname, "../.env"),
 });
 
-const checkRegistExistingUsernameEmail = async (email, username) => {
+const checkRegistExistingUser = async (email, username, phone) => {
   const dataEmail = await User.findOne({ where: { email: email } });
   const dataUsername = await User.findOne({
     where: { username: username },
+  });
+  const dataPhone = await User.findOne({
+    where: { phone: phone },
   });
   if (dataUsername) {
     return {
@@ -22,6 +25,12 @@ const checkRegistExistingUsernameEmail = async (email, username) => {
     return {
       statusCode: 400,
       message: "Email exist!",
+    };
+  }
+  if (dataPhone) {
+    return {
+      statusCode: 400,
+      message: "Phone exist!",
     };
   }
 };
@@ -70,43 +79,91 @@ const createUser = async (username, email, phone, password) => {
   return dataUser;
 };
 
-const checkLoginInput = async () => {
-  let dataInput = {};
-  //get data login
-  if (username) {
-    dataInput = { username: username };
-  } else if (email) {
-    dataInput = { email: email };
-  } else if (phone) {
-    dataInput = { phone: phone };
-  } else {
-    return res.status(500).json({
-      message: "Login failed",
-      error: "Invalid input",
-    });
-  }
-
-  //get data from DB
-  const checkLogin = await User.findOne({
-    where: dataInput,
+const updatePassword = async (id, password) => {
+  const salt = await bcrypt.genSalt(10);
+  const hashPassword = await bcrypt.hash(password, salt);
+  await db.sequelize.transaction(async (t) => {
+    await User.update(
+      { password: hashPassword },
+      { where: { id: id } },
+      { transaction: t }
+    );
   });
 };
 
-const checkPassword = async (bodyPassword, dbPassword) => {
-  const isValid = await bcrypt.compare(bodyPassword, dbPassword);
+const updateIsVerifiedUserTrue = async (userId) => {
+  const dataUsername = await User.findOne({
+    where: { id: userId },
+  });
+
+  if (dataUsername.isVerified) {
+    return {
+      statusCode: 400,
+      message: "User is verified",
+    };
+  }
+
+  await db.sequelize.transaction(async (t) => {
+    await User.update(
+      { isVerified: 1 },
+      { where: { id: userId } },
+      { transaction: t }
+    );
+  });
+};
+
+const updateIsVerifiedUserFalse = async (userId) => {
+  const dataUsername = await User.findOne({
+    where: { id: userId },
+  });
+
+  if (dataUsername.isVerified) {
+    return {
+      statusCode: 400,
+      message: "User is verified",
+    };
+  }
+
+  await db.sequelize.transaction(async (t) => {
+    await User.update(
+      { isVerified: 0 },
+      { where: { id: userId } },
+      { transaction: t }
+    );
+  });
+};
+
+const validatePassword = async (userId, password) => {
+  const checkData = await User.findOne({
+    where: { id: userId },
+  });
+  const isValid = await bcrypt.compare(password, checkData.password);
   if (!isValid) {
-    return res.status(404).json({
-      message: "Login failed",
-      error: "Password is incorrect",
-    });
+    return { statusCode: 400, message: "Current password is incorrect" };
+  }
+};
+
+const checkLoginInput = async (password, dataInput) => {
+  const checkLogin = await User.findOne({
+    where: dataInput,
+  });
+  if (!checkLogin) {
+    return { statusCode: 404, message: { error: "User not found", dataInput } };
+  }
+  const result = await validatePassword(checkLogin.id, password);
+  if (result) {
+    return result;
   }
 };
 
 module.exports = {
-  checkRegistExistingUsernameEmail,
+  checkRegistExistingUser,
   checkComparePassword,
+  validatePassword,
   checkPasswordValidator,
   checkLoginInput,
-  checkPassword,
   createUser,
+  updateIsVerifiedUserTrue,
+  updateIsVerifiedUserFalse,
+  updatePassword,
 };

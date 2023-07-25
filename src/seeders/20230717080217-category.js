@@ -5,17 +5,7 @@ module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.bulkInsert("Categories", [
       {
-        categoryName: "Bisnis",
-        createdAt: "2023-01-27 07:52:27",
-        updatedAt: "2023-01-27 07:52:27",
-      },
-      {
-        categoryName: "Ekonomi",
-        createdAt: "2023-01-27 07:52:27",
-        updatedAt: "2023-01-27 07:52:27",
-      },
-      {
-        categoryName: "Teknologi",
+        categoryName: "Umum",
         createdAt: "2023-01-27 07:52:27",
         updatedAt: "2023-01-27 07:52:27",
       },
@@ -25,12 +15,17 @@ module.exports = {
         updatedAt: "2023-01-27 07:52:27",
       },
       {
-        categoryName: "Kuliner",
+        categoryName: "Ekonomi",
         createdAt: "2023-01-27 07:52:27",
         updatedAt: "2023-01-27 07:52:27",
       },
       {
-        categoryName: "Internasional",
+        categoryName: "Politik",
+        createdAt: "2023-01-27 07:52:27",
+        updatedAt: "2023-01-27 07:52:27",
+      },
+      {
+        categoryName: "Bisnis",
         createdAt: "2023-01-27 07:52:27",
         updatedAt: "2023-01-27 07:52:27",
       },

@@ -7,7 +7,7 @@ module.exports = {
       {
         username: "test1",
         email: "test1@mailinator.com",
-        phone: "0851111110",
+        phone: "0851111112",
         password:
           "$2b$10$aSsG1v5vHv/FKfY0jhpOjOrORXXr2rruZwa6X16EYqleY.ULLg7oe",
         profileImg: "",
