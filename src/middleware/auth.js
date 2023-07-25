@@ -1,20 +1,28 @@
 const jwt = require("jsonwebtoken");
-const verifyToken = (req, res, next) => {
-  let token = req.headers.authorization;
-  if (!token) {
+const db = require("../models");
+const User = db.User;
+const verifyToken = async (req, res, next) => {
+  const tokenApi = req.headers.authorization;
+  const tokenEmail = req.params.tokenEmail;
+  // const token = tokenApi.split(" ")[1];
+  let dataUser;
+
+  if (tokenApi) {
+    token = tokenApi.split(" ")[1];
+  } else if (tokenEmail) {
+    token = tokenEmail;
+  } else {
     return res.status(401).json({
-      message: "Invalid Token",
-      error: "Access Denied!",
+      message: "Access Denied!",
+      error: "Please check your token",
     });
   }
 
   try {
-    token = token.split(" ")[1];
-
     if (token === "null" || !token) {
       return res.status(401).json({
-        message: "Invalid Token",
-        error: "Access Denied!",
+        message: "Access Denied!",
+        error: "Token null or undefined",
       });
     }
 
@@ -25,9 +33,26 @@ const verifyToken = (req, res, next) => {
         error: "Unauthorized request",
       });
     }
+    if (!verifiedUser.username) {
+      dataUser = await User.findOne({
+        where: { email: verifiedUser.email },
+      });
+    } else {
+      dataUser = await User.findOne({
+        where: { username: verifiedUser.username },
+      });
+    }
 
-    req.user = verifiedUser;
-    // console.log(req.user);
+    if (!dataUser) {
+      return res.status(401).json({
+        message: "Invalid Token",
+        error: "User not registered",
+      });
+    }
+
+    req.user = dataUser;
+    req.token = token;
+    req.dataToken = verifiedUser;
     next();
   } catch (err) {
     return res.status(400).json({
@@ -37,14 +62,19 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-const checkRole = async (req, res, next) => {
-  if (req.user) {
-    return next();
+const checkUserVerification = async (req, res, next) => {
+  //check user verification data
+  const { isVerified } = req.user;
+  if (!isVerified) {
+    return res.status(404).json({
+      message: "Verification failed",
+      error: "User not verified",
+    });
   }
-  return res.status(401).send("unauthorized");
+  next();
 };
 
 module.exports = {
   verifyToken,
-  checkRole,
+  checkUserVerification,
 };

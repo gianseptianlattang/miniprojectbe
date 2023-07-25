@@ -1,101 +1,129 @@
 const db = require("../models");
 const User = db.User;
-const bcrypt = require("bcrypt");
-const passwordValidator = require("password-validator");
-const jwt = require("jsonwebtoken");
 const path = require("path");
 require("dotenv").config({
   path: path.resolve(__dirname, "../.env"),
 });
+const SendEmail = require("../helpers/sendEmail");
+const { authService, tokenService } = require("../service");
 
 const AuthController = {
   userRegistration: async (req, res) => {
     try {
       const { username, email, phone, password, confirmPassword } = req.body;
-
-      //check confirm password
-      if (password !== confirmPassword) {
-        return res.status(400).json({
-          message: "Registration Failed",
-          error: "password and confirm Password is not match",
+      const errorInput = await authService.checkRegistExistingUser(
+        email,
+        username,
+        phone
+      );
+      const errorPasswordValidator =
+        authService.checkPasswordValidator(password);
+      const errorComparePassword = authService.checkComparePassword(
+        password,
+        confirmPassword
+      );
+      const registrationError =
+        errorInput || errorPasswordValidator || errorComparePassword;
+      if (registrationError) {
+        return res.status(registrationError.statusCode).json({
+          error: "Registration Failed",
+          message: registrationError.message,
         });
       }
-      //password validation
-      var schema = new passwordValidator();
-      schema
-        .is()
-        .min(6, "password must have minimum 6 character")
-        .has()
-        .uppercase(1, "password must have minimum 1 uppercase")
-        .has()
-        .symbols(1, "password must have minimum 1 symbol");
-
-      if (!schema.validate(password)) {
-        return res.status(400).json({
-          message: "Registration Failed",
-          error: schema.validate(password, { details: true })[0].message,
-        });
-      }
-
-      //password encrypt and transaction
-      const salt = await bcrypt.genSalt(10);
-      const hashPassword = await bcrypt.hash(password, salt);
-      await db.sequelize.transaction(async (t) => {
-        const data = await User.create(
-          {
-            username,
-            email,
-            phone,
-            password: hashPassword,
-          },
-          { transaction: t }
-        );
-
-        //create token
-        let payload = {
-          username: username,
-          email: email,
-        };
-        const token = jwt.sign(payload, process.env.JWT_KEY, {
-          expiresIn: "1m",
-        });
-        if (!token) {
-          return res.status(500).json({
-            message: "Registration Failed",
-            error: "get token failed",
-          });
-        }
-
-        return res.status(200).json({
-          message: "Registration Succeed",
-          data,
-          token,
-        });
+      const payload = {
+        username: username,
+        email: email,
+        phone: phone,
+      };
+      const token = tokenService.createToken(payload);
+      const data = await authService.createUser(
+        username,
+        email,
+        phone,
+        password
+      );
+      SendEmail.verifyEmail(email, token);
+      return res.status(200).json({
+        success: "Registration Succeed",
+        message: "Please verify your account from email",
+        data,
+        token,
       });
     } catch (err) {
       return res.status(err.statusCode || 500).json({
-        message: "Registration Failed",
-        error: err.errors[0].message,
+        error: "Registration Failed",
+        message: err.message,
       });
     }
   },
 
   userVerify: async (req, res) => {
     try {
-      await db.sequelize.transaction(async (t) => {
-        const { username } = req.user;
-        await User.update(
-          { isVerified: 1 },
-          { where: { username: username } },
-          { transaction: t }
-        );
-        return res.status(200).json({
-          message: "Verification Succeed",
+      const { id } = req.user;
+      const dataUpdateUser = await authService.updateIsVerifiedUserTrue(id);
+      if (dataUpdateUser) {
+        return res.status(dataUpdateUser.statusCode).json({
+          error: "Verification Failed",
+          message: dataUpdateUser.message,
         });
+      }
+      return res.status(200).json({
+        success: "Verification Succeed",
       });
     } catch (err) {
       return res.status(err.statusCode || 500).json({
-        message: "Verification Failed",
+        error: "Verification Failed",
+        message: err.message,
+      });
+    }
+  },
+
+  userLogin: async (req, res) => {
+    try {
+      const { username, email, phone, password } = req.body;
+      let dataInput = {};
+      if (username) {
+        dataInput = { username: username };
+      } else if (email) {
+        dataInput = { email: email };
+      } else if (phone) {
+        dataInput = { phone: phone };
+      } else {
+        return {
+          statusCode: 500,
+          message: "Invalid input",
+        };
+      }
+      const errorCheckLogin = await authService.checkLoginInput(
+        password,
+        dataInput
+      );
+      if (errorCheckLogin) {
+        return res.status(errorCheckLogin.statusCode).json({
+          error: "Login failed",
+          message: errorCheckLogin.message,
+        });
+      }
+      const checkLogin = await User.findOne({
+        where: dataInput,
+      });
+      let payload = {
+        id: checkLogin.id,
+        username: checkLogin.username,
+        email: checkLogin.email,
+        phone: checkLogin.phone,
+        isAdmin: checkLogin.isAdmin,
+        isVerified: checkLogin.isVerified,
+      };
+      const token = tokenService.createToken(payload);
+      return res.status(200).json({
+        message: "Login succeed",
+        data: payload,
+        token,
+      });
+    } catch (err) {
+      return res.status(500).json({
+        message: "Login failed",
         error: err.message,
       });
     }

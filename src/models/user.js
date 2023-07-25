@@ -15,6 +15,7 @@ module.exports = (sequelize, DataTypes) => {
       phone: {
         type: DataTypes.STRING,
         allowNull: false,
+        unique: true,
       },
       password: {
         type: DataTypes.STRING,
@@ -39,5 +40,8 @@ module.exports = (sequelize, DataTypes) => {
     {}
   );
 
+  User.associate = (models) => {
+    User.hasMany(models.Blog, { foreignKey: "userId" });
+  };
   return User;
 };
