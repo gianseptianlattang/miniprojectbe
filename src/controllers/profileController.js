@@ -67,8 +67,6 @@ const ProfileController = {
     try {
       await db.sequelize.transaction(async (t) => {
         const { oldEmail, newEmail } = req.dataToken;
-        console.log(req.dataToken);
-        console.log(oldEmail);
         const data = await User.findOne({ where: { email: oldEmail } });
 
         if (!data) {
