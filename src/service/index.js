@@ -1,9 +1,9 @@
 const authService = require("./authService");
 const tokenService = require("./tokenService");
-const dbService = require("./dbService");
+const profileService = require("./profileService");
 
 module.exports = {
   authService,
   tokenService,
-  dbService,
+  profileService,
 };
