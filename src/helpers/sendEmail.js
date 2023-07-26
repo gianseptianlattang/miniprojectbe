@@ -21,7 +21,6 @@ const SendEmail = {
       html: `<h4>Please verify your email by clicking the link below:</h4>
       <a href="http://localhost:8000/auth/verify/${dataToken}">Verify Account</a>`,
     };
-
     try {
       await transporter.sendMail(mailOptions);
       console.log("Verification email sent");
@@ -38,7 +37,6 @@ const SendEmail = {
       text: "Thankyou",
       html: `<h2> ${changes} has been changed to "${newUsername}"</h2>`,
     };
-
     try {
       await transporter.sendMail(mailOptions);
       console.log("Data sent to email");

@@ -218,7 +218,7 @@ const ProfileController = {
             console.error(err);
             return;
           }
-          console.log("Old avatar deleted successfully");
+          console.log("Previous avatar deleted successfully");
         });
         return res.status(200).json({
           success: "Change avatar Success",
