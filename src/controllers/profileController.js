@@ -44,7 +44,7 @@ const ProfileController = {
         );
         SendEmail.changeUsernameEmail(email, newUsername, "Username");
         return res.status(200).json({
-          success: "Username updated",
+          success: "Username Updated",
           username: newUsername,
         });
       });
