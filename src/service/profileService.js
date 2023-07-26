@@ -80,7 +80,7 @@ const updateProfileItem = async (
       const updateData = { [itemField]: newValue };
       const updateWhere = { id };
       await User.update(updateData, { where: updateWhere }, { transaction: t });
-      SendEmail.changeUsernameEmail(email, newValue);
+      SendEmail.changeUsernameEmail(email, newValue, itemField);
     }
   });
 };
